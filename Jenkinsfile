@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        // You can set environment variables here if needed
     }
 
     stages {
@@ -46,10 +47,6 @@ pipeline {
             echo 'Deployed successfully!'
         }
         failure {
-            echo 'Build failed.'
-        }
-    }
-}
             echo 'Build failed.'
         }
     }
