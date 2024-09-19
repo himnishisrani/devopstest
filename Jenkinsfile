@@ -17,49 +17,80 @@ pipeline {
         pollSCM('* * * * *')
     }
 
-    stages {
-        stage('Checkout') {
+//     stages {
+//         stage('Checkout') {
+//             steps {
+//                 // Checkout code from GitHub repository
+//                 git url: 'https://github.com/himnishisrani/devopstest.git', branch: 'main'
+//             }
+//         }
+
+//         stage('Install Dependencies') {
+//             steps {
+//                 // Install dependencies (adjust this based on your project type, e.g., npm for Node.js)
+//                 sh 'npm install'
+//             }
+//         }
+
+//         stage('Build') {
+//             steps {
+//                 // Build the project (adjust this for your project, e.g., npm build, Maven, etc.)
+//                 sh 'npm run build'
+//             }
+//         }
+
+//         stage('Deploy to EC2') {
+//             steps {
+//                 script {
+//                     // Deploy the built files to the EC2 instance via SCP
+//                     sshagent([SSH_CREDENTIALS_ID]) {
+//                         sh """
+//                         scp -o StrictHostKeyChecking=no -r ./build ${EC2_USER}@${EC2_HOST}:${DEPLOY_DIR}
+//                         ssh ${EC2_USER}@${EC2_HOST} "sudo systemctl restart your-app-service"
+//                         """
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     post {
+//         success {
+//             echo 'Build and deployment successful!'
+//         }
+//         failure {
+//             echo 'Build or deployment failed.'
+//         }
+//     }
+// }
+stages{
+        stage("Clone Code"){
             steps {
-                // Checkout code from GitHub repository
-                git url: 'https://github.com/himnishisrani/devopstest.git', branch: 'main'
+                echo "Cloning the code"
+                git url:"https://github.com/LondheShubham153/django-notes-app.git", branch: "main"
             }
         }
-
-        stage('Install Dependencies') {
+        stage("Build"){
             steps {
-                // Install dependencies (adjust this based on your project type, e.g., npm for Node.js)
-                sh 'npm install'
+                echo "Building the image"
+                sh "docker build -t my-note-app ."
             }
         }
-
-        stage('Build') {
+        stage("Push to Docker Hub"){
             steps {
-                // Build the project (adjust this for your project, e.g., npm build, Maven, etc.)
-                sh 'npm run build'
-            }
-        }
-
-        stage('Deploy to EC2') {
-            steps {
-                script {
-                    // Deploy the built files to the EC2 instance via SCP
-                    sshagent([SSH_CREDENTIALS_ID]) {
-                        sh """
-                        scp -o StrictHostKeyChecking=no -r ./build ${EC2_USER}@${EC2_HOST}:${DEPLOY_DIR}
-                        ssh ${EC2_USER}@${EC2_HOST} "sudo systemctl restart your-app-service"
-                        """
-                    }
+                echo "Pushing the image to docker hub"
+                withCredentials([usernamePassword(credentialsId:"dockerHub",passwordVariable:"dockerHubPass",usernameVariable:"dockerHubUser")]){
+                sh "docker tag my-note-app ${env.dockerHubUser}/my-note-app:latest"
+                sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
+                sh "docker push ${env.dockerHubUser}/my-note-app:latest"
                 }
             }
         }
-    }
-
-    post {
-        success {
-            echo 'Build and deployment successful!'
-        }
-        failure {
-            echo 'Build or deployment failed.'
+        stage("Deploy"){
+            steps {
+                echo "Deploying the container"
+                sh "docker-compose down && docker-compose up -d"
+                
+            }
         }
     }
-}
